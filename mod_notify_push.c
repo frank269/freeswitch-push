@@ -167,11 +167,11 @@ static void originate_register_event_handler(switch_event_t *event)
 	char *destination = NULL;
 	const char *domain_name = NULL, *dial_user = NULL, *update_reg = NULL;
 	uint32_t timelimit_sec = 0;
-	originate_data = (struct originate_register_data *)event->bind_user_data;
-	switch_memory_pool_t *pool;
+	switch_memory_pool_t *pool = NULL;
 	switch_mutex_t *handles_mutex;
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_call_push originate_register_event_handler CARUSTO. Update existing registration, skip originate\n");
+	originate_data = (struct originate_register_data *)event->bind_user_data;
 	if (!originate_data)
 	{
 		return;
