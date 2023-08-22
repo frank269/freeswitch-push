@@ -162,7 +162,6 @@ static char *get_url_from_contact(char *buf)
 static void originate_register_event_handler(switch_event_t *event)
 {
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_call_push originate_register_event_handler CARUSTO. Update existing registration, skip originate\n");
-	char *dest = NULL;
 	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
 	char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
 	char *destination = NULL;
@@ -206,7 +205,7 @@ static void originate_register_event_handler(switch_event_t *event)
 		return;
 	}
 
-	dest = get_url_from_contact(event_contact);
+	char *dest = get_url_from_contact(event_contact);
 
 	if (zstr(dest))
 	{
@@ -290,7 +289,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 {
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify_push push_wait_outgoing_channel fired!\n");
-	switch_call_cause_t cause = SWITCH_CAUSE_NONE;
+	switch_call_cause_t cause = {0};
 	uint32_t timelimit_sec = 0;
 	uint32_t current_timelimit = 0;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
@@ -316,7 +315,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	if (var_event && !zstr(switch_event_get_header(var_event, "originate_reg_token")))
 	{
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Skip originate in case have custom originate token registration\n");
-		return cause;
+		return SWITCH_CAUSE_NONE;
 	}
 
 	start = switch_epoch_time_now(NULL);
@@ -324,7 +323,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	if (!pool)
 	{
-		return cause;
+		return SWITCH_CAUSE_NONE;
 	}
 
 	if (session)
@@ -435,7 +434,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 		if (wait_any_register != SWITCH_TRUE)
 		{
 			switch_mutex_lock(apn_response.mutex);
-			if (apn_response.state == MOD_APN_NOTSENT)
+			if (apn_response.state == MOD_PUSH_NOTSENT)
 			{
 				switch_mutex_unlock(apn_response.mutex);
 				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Event APN don't sent to %s@%s, so stop wait for incoming register\n", user, domain);
@@ -534,7 +533,6 @@ done:
 SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push)
 {
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Mod_call_push is loading ...\n");
-	switch_status_t status = SWITCH_STATUS_FALSE;
 	switch_api_interface_t *api_interface;
 
 	/* connect my internal structure to the blank pointer passed to me */
@@ -550,24 +548,6 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push)
 
 	/* indicate that the module should continue to be loaded */
 	return SWITCH_STATUS_SUCCESS;
-
-error:
-	if (register_event)
-	{
-		switch_event_unbind(&register_event);
-		register_event = NULL;
-	}
-	if (push_event)
-	{
-		switch_event_unbind(&push_event);
-		push_event = NULL;
-	}
-	if (globals.profile_hash)
-	{
-		switch_core_hash_destroy(&globals.profile_hash);
-		globals.profile_hash = NULL;
-	}
-	return SWITCH_STATUS_TERM;
 }
 
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_push_shutdown)
