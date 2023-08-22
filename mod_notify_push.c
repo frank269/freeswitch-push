@@ -161,16 +161,17 @@ static char *get_url_from_contact(char *buf)
 
 static void originate_register_event_handler(switch_event_t *event)
 {
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_call_push originate_register_event_handler CARUSTO. Update existing registration, skip originate\n");
-	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
+	originate_register_t *originate_data = NULL;
 	char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
+	char *dest = NULL;
 	char *destination = NULL;
 	const char *domain_name = NULL, *dial_user = NULL, *update_reg = NULL;
 	uint32_t timelimit_sec = 0;
-
+	originate_data = (struct originate_register_data *)event->bind_user_data;
 	switch_memory_pool_t *pool;
 	switch_mutex_t *handles_mutex;
 
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_call_push originate_register_event_handler CARUSTO. Update existing registration, skip originate\n");
 	if (!originate_data)
 	{
 		return;
@@ -205,7 +206,7 @@ static void originate_register_event_handler(switch_event_t *event)
 		return;
 	}
 
-	char *dest = get_url_from_contact(event_contact);
+	dest = get_url_from_contact(event_contact);
 
 	if (zstr(dest))
 	{
@@ -288,7 +289,6 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 													  switch_call_cause_t *cancel_cause)
 {
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify_push push_wait_outgoing_channel fired!\n");
 	switch_call_cause_t cause = {0};
 	uint32_t timelimit_sec = 0;
 	uint32_t current_timelimit = 0;
@@ -312,6 +312,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_time_t start = 0;
 	int diff = 0;
 
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify_push push_wait_outgoing_channel fired!\n");
 	if (var_event && !zstr(switch_event_get_header(var_event, "originate_reg_token")))
 	{
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Skip originate in case have custom originate token registration\n");
@@ -532,12 +533,11 @@ done:
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push)
 {
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Mod_call_push is loading ...\n");
 	switch_api_interface_t *api_interface;
 
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Mod_call_push is loading ...\n");
 	/* connect my internal structure to the blank pointer passed to me */
 	*module_interface = switch_loadable_module_create_module_interface(pool, modname);
-
 	SWITCH_ADD_API(api_interface, "push", "Notify Push Service", push_api_function, APN_USAGE);
 
 	push_wait_endpoint_interface = (switch_endpoint_interface_t *)switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE);
