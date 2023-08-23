@@ -5,9 +5,9 @@
 #include <string.h>
 #include <switch_version.h>
 
-SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push);
+SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push_load);
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_push_shutdown);
-SWITCH_MODULE_DEFINITION(mod_push, mod_notify_push, mod_push_shutdown, NULL);
+SWITCH_MODULE_DEFINITION(mod_push, mod_notify_push_load, mod_push_shutdown, NULL);
 
 #define SWITCH_LESS_THAN(x, y)                               \
 	(((FS_VERSION_MAJOR == x) && (FS_VERSION_MINOR == y)) || \
@@ -71,9 +71,9 @@ struct response_event_data
 };
 typedef struct response_event_data response_t;
 
-#define APN_USAGE ""          \
-				  "extension" \
-				  ""
+#define PUSH_USAGE ""          \
+				   "extension" \
+				   ""
 SWITCH_STANDARD_API(push_api_function)
 {
 	char *pdata = NULL;
@@ -88,7 +88,7 @@ SWITCH_STANDARD_API(push_api_function)
 	if (!pdata)
 	{
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "No data\n");
-		stream->write_function(stream, "USAGE: %s", APN_USAGE);
+		stream->write_function(stream, "USAGE: %s", PUSH_USAGE);
 		goto end;
 	}
 
@@ -531,14 +531,14 @@ done:
 	return cause;
 }
 
-SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push)
+SWITCH_MODULE_LOAD_FUNCTION(mod_notify_push_load)
 {
 	switch_api_interface_t *api_interface;
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Mod_call_push is loading ...\n");
 	/* connect my internal structure to the blank pointer passed to me */
 	*module_interface = switch_loadable_module_create_module_interface(pool, modname);
-	SWITCH_ADD_API(api_interface, "push", "Notify Push Service", push_api_function, APN_USAGE);
+	SWITCH_ADD_API(api_interface, "push", "Notify Push Service", push_api_function, PUSH_USAGE);
 
 	push_wait_endpoint_interface = (switch_endpoint_interface_t *)switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE);
 	push_wait_endpoint_interface->interface_name = "push_wait";
