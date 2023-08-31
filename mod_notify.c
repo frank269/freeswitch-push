@@ -39,11 +39,14 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 													  switch_core_session_t **new_session, switch_memory_pool_t **_pool, switch_originate_flag_t flags,
 													  switch_call_cause_t *cancel_cause)
 {
-	uint32_t timelimit_sec = 20;
-	uint32_t current_timelimit = 0;
+	switch_call_cause_t cause = SWITCH_CAUSE_NONE;
+	char *cid_name_override = NULL, *cid_num_override = NULL;
+	uint32_t timelimit_sec = 5;
+	uint32_t current_timelimit = 5;
 	switch_time_t start = 0;
 	int diff = 0;
 	switch_channel_t *channel = NULL;
+	char *destination = "1001@voice.metechvn.com";
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify push_wait_outgoing_channel fired!\n");
 	start = switch_epoch_time_now(NULL);
@@ -71,7 +74,33 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 		switch_cond_next();
 		switch_yield(1000);
 	}
-	return SWITCH_CAUSE_NONE;
+#if SWITCH_LESS_THAN(1, 8)
+	if (switch_ivr_originate(session, new_session, &cause, destination, current_timelimit, NULL,
+							 cid_name_override, cid_num_override, outbound_profile, var_event, flags,
+							 cancel_cause) == SWITCH_STATUS_SUCCESS)
+	{
+#else
+	if (switch_ivr_originate(session, new_session, &cause, destination, current_timelimit, NULL,
+							 cid_name_override, cid_num_override, outbound_profile, var_event, flags,
+							 cancel_cause, NULL) == SWITCH_STATUS_SUCCESS)
+	{
+#endif
+		const char *context;
+		switch_caller_profile_t *cp;
+		switch_channel_t *new_channel = NULL;
+
+		new_channel = switch_core_session_get_channel(*new_session);
+
+		if ((context = switch_channel_get_variable(new_channel, "context")))
+		{
+			if ((cp = switch_channel_get_caller_profile(new_channel)))
+			{
+				cp->context = switch_core_strdup(cp->pool, context);
+			}
+		}
+		switch_core_session_rwunlock(*new_session);
+	}
+	return cause;
 }
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_notify_load)
