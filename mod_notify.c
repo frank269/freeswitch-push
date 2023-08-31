@@ -36,7 +36,7 @@ SWITCH_STANDARD_API(notify_api_function)
 
 static void originate_register_event_handler(switch_event_t *event)
 {
-	char *dest = NULL;
+	// char *dest = NULL;
 	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
 	// char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
 	char *destination = NULL;
