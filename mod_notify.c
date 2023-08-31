@@ -40,8 +40,8 @@ static void originate_register_event_handler(switch_event_t *event)
 	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
 	// char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
 	char *destination = NULL;
-	const char *domain_name = NULL, *dial_user = NULL, *update_reg = NULL;
-	uint32_t timelimit_sec = 0;
+	// const char *domain_name = NULL, *dial_user = NULL, *update_reg = NULL;
+	// uint32_t timelimit_sec = 0;
 
 	switch_memory_pool_t *pool;
 	switch_mutex_t *handles_mutex;
@@ -55,15 +55,15 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	pool = originate_data->pool;
 	handles_mutex = originate_data->mutex;
-	domain_name = originate_data->realm;
-	dial_user = originate_data->user;
+	// domain_name = originate_data->realm;
+	// dial_user = originate_data->user;
 
-	update_reg = switch_event_get_header(event, "update-reg");
-	if (!zstr(update_reg) && switch_true(update_reg))
-	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Update existing registration, skip originate\n");
-		return;
-	}
+	// update_reg = switch_event_get_header(event, "update-reg");
+	// if (!zstr(update_reg) && switch_true(update_reg))
+	// {
+	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Update existing registration, skip originate\n");
+	// 	return;
+	// }
 
 	// event_username = switch_event_get_header(event, "username");
 	// event_realm = switch_event_get_header(event, "realm");
@@ -90,7 +90,7 @@ static void originate_register_event_handler(switch_event_t *event)
 	// 	goto end;
 	// }
 
-	timelimit_sec = *originate_data->timelimit;
+	// timelimit_sec = *originate_data->timelimit;
 
 	destination = "user/1001@voice.metechvn.com";
 	// switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_apn=false,apn_wait_any_register=%s]apn_wait/%s@%s",
@@ -111,7 +111,7 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	// end:
 	switch_safe_free(destination);
-	switch_safe_free(dest);
+	// switch_safe_free(dest);
 }
 
 /* fake user_wait */
@@ -140,10 +140,10 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
 	char *destination = NULL;
-	switch_bool_t wait_any_register = SWITCH_FALSE;
+	// switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
-	switch_event_t *event = NULL;
+	// switch_event_t *event = NULL;
 	switch_event_node_t *response_event = NULL, *register_event = NULL;
 	originate_register_t originate_data = {
 		0,
@@ -229,10 +229,10 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	switch_mutex_init(&originate_data.mutex, SWITCH_MUTEX_NESTED, pool);
 
-	if (var_event && switch_true(switch_event_get_header(var_event, "apn_wait_any_register")))
-	{
-		wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
-	}
+	// if (var_event && switch_true(switch_event_get_header(var_event, "apn_wait_any_register")))
+	// {
+	// 	wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
+	// }
 
 	originate_data.timelimit = &current_timelimit;
 
