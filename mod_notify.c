@@ -46,7 +46,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_time_t start = 0;
 	int diff = 0;
 	switch_channel_t *channel = NULL;
-	char *destination = "1001@voice.metechvn.com";
+	char *destination = "user/1001@voice.metechvn.com";
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify push_wait_outgoing_channel fired!\n");
 	start = switch_epoch_time_now(NULL);
