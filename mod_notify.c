@@ -110,7 +110,7 @@ static void originate_register_event_handler(switch_event_t *event)
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Try originate to '%s' (by registration event)\n", destination);
 
 	// end:
-	switch_safe_free(destination);
+	// switch_safe_free(destination);
 	// switch_safe_free(dest);
 }
 
