@@ -38,7 +38,7 @@ static void originate_register_event_handler(switch_event_t *event)
 {
 	char *dest = NULL;
 	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
-	char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
+	// char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
 	char *destination = NULL;
 	const char *domain_name = NULL, *dial_user = NULL, *update_reg = NULL;
 	uint32_t timelimit_sec = 0;
@@ -55,8 +55,8 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	pool = originate_data->pool;
 	handles_mutex = originate_data->mutex;
-	// domain_name = originate_data->realm;
-	// dial_user = originate_data->user;
+	domain_name = originate_data->realm;
+	dial_user = originate_data->user;
 
 	update_reg = switch_event_get_header(event, "update-reg");
 	if (!zstr(update_reg) && switch_true(update_reg))
@@ -90,7 +90,7 @@ static void originate_register_event_handler(switch_event_t *event)
 	// 	goto end;
 	// }
 
-	// timelimit_sec = *originate_data->timelimit;
+	timelimit_sec = *originate_data->timelimit;
 
 	destination = "user/1001@voice.metechvn.com";
 	// switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_apn=false,apn_wait_any_register=%s]apn_wait/%s@%s",
@@ -109,7 +109,7 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Try originate to '%s' (by registration event)\n", destination);
 
-end:
+	// end:
 	switch_safe_free(destination);
 	switch_safe_free(dest);
 }
@@ -140,6 +140,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
 	char *destination = NULL;
+	switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
 	switch_event_t *event = NULL;
@@ -313,6 +314,7 @@ done:
 		switch_event_unbind(&register_event);
 		register_event = NULL;
 	}
+	switch_safe_free(dup_domain);
 	if (pool)
 	{
 		switch_core_destroy_memory_pool(&pool);
