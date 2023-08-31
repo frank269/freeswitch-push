@@ -39,7 +39,38 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 													  switch_core_session_t **new_session, switch_memory_pool_t **_pool, switch_originate_flag_t flags,
 													  switch_call_cause_t *cancel_cause)
 {
+	uint32_t timelimit_sec = 20;
+	uint32_t current_timelimit = 0;
+	switch_time_t start = 0;
+	int diff = 0;
+	switch_channel_t *channel = NULL;
+
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify push_wait_outgoing_channel fired!\n");
+	start = switch_epoch_time_now(NULL);
+	if (session)
+	{
+		channel = switch_core_session_get_channel(session);
+	}
+	while (current_timelimit > 0)
+	{
+		diff = (int)(switch_epoch_time_now(NULL) - start);
+		current_timelimit = timelimit_sec - diff;
+		if (session)
+		{
+			switch_ivr_parse_all_messages(session);
+		}
+
+		if (channel && !switch_channel_ready(channel))
+		{
+			break;
+		}
+		if (cancel_cause && *cancel_cause > 0)
+		{
+			break;
+		}
+		switch_cond_next();
+		switch_yield(1000);
+	}
 	return SWITCH_CAUSE_NONE;
 }
 
