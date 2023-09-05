@@ -38,38 +38,40 @@ static void originate_register_event_handler(switch_event_t *event)
 {
 	// char *dest = NULL;
 	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
-	// char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
+	char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
 	char *destination = NULL;
-	// const char *domain_name = NULL, *dial_user = NULL, *update_reg = NULL;
+	const char *update_reg = NULL, *domain_name = NULL, *dial_user = NULL;
 	// uint32_t timelimit_sec = 0;
 
 	switch_memory_pool_t *pool;
 	switch_mutex_t *handles_mutex;
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "originate_register_event_handler fired!\n");
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler fired!\n");
 
 	if (!originate_data)
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "originate_register_event_handler originate_data is null!\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler originate_data is null!\n");
 		return;
 	}
 
 	pool = originate_data->pool;
 	handles_mutex = originate_data->mutex;
-	// domain_name = originate_data->realm;
-	// dial_user = originate_data->user;
+	domain_name = originate_data->realm;
+	dial_user = originate_data->user;
 
-	// update_reg = switch_event_get_header(event, "update-reg");
-	// if (!zstr(update_reg) && switch_true(update_reg))
-	// {
-	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Update existing registration, skip originate\n");
-	// 	return;
-	// }
+	update_reg = switch_event_get_header(event, "update-reg");
+	if (!zstr(update_reg) && switch_true(update_reg))
+	{
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler user already registration, skip originate\n");
+		return;
+	}
 
-	// event_username = switch_event_get_header(event, "username");
-	// event_realm = switch_event_get_header(event, "realm");
-	// event_call_id = switch_event_get_header(event, "call-id");
-	// event_contact = switch_event_get_header(event, "contact");
-	// event_profile = switch_event_get_header(event, "profile-name");
+	event_username = switch_event_get_header(event, "username");
+	event_realm = switch_event_get_header(event, "realm");
+	event_call_id = switch_event_get_header(event, "call-id");
+	event_contact = switch_event_get_header(event, "contact");
+	event_profile = switch_event_get_header(event, "profile-name");
+
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler domain_name: %s, dial_user: %s, event_username: %s, event_realm: %s, event_call_id: %s, event_contact: %s, event_profile: %s \n", domain_name, dial_user, event_username, event_realm, event_call_id, event_contact, event_profile);
 
 	// if (zstr(event_username) || zstr(event_realm) || zstr(event_call_id) || zstr(event_profile) || zstr(event_contact) || zstr(domain_name) || zstr(dial_user))
 	// {
@@ -93,7 +95,7 @@ static void originate_register_event_handler(switch_event_t *event)
 	// timelimit_sec = *originate_data->timelimit;
 
 	destination = "user/1001@voice.metechvn.com";
-	// switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_apn=false,apn_wait_any_register=%s]apn_wait/%s@%s",
+	// switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_notify=false,notify_wait_any_register=%s]apn_wait/%s@%s",
 	// 							 event_call_id,
 	// 							 timelimit_sec,
 	// 							 event_profile,
@@ -107,7 +109,7 @@ static void originate_register_event_handler(switch_event_t *event)
 	originate_data->destination = switch_core_strdup(pool, destination);
 	switch_mutex_unlock(handles_mutex);
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. Try originate to '%s' (by registration event)\n", destination);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Try originate to '%s' (by registration event)\n", destination);
 
 	// end:
 	// switch_safe_free(destination);
@@ -140,7 +142,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
 	char *destination = NULL;
-	// switch_bool_t wait_any_register = SWITCH_FALSE;
+	switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
 	// switch_event_t *event = NULL;
@@ -149,11 +151,11 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 		0,
 	};
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify push_wait_outgoing_channel fired!\n");
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel fired!\n");
 
 	if (var_event && !zstr(switch_event_get_header(var_event, "originate_reg_token")))
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Skip originate in case have custom originate token registration\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Skip originate in case have custom originate token registration\n");
 		return cause;
 	}
 
@@ -161,7 +163,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_core_new_memory_pool(&pool);
 	if (!pool)
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify cannot create pool!\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify cannot create pool!\n");
 		return cause;
 	}
 	if (session)
@@ -170,17 +172,17 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	}
 	if (!outbound_profile || zstr(outbound_profile->destination_number))
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify not found outbound_profile or destination_number !\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify not found outbound_profile or destination_number !\n");
 		goto done;
 	}
 
 	user = switch_core_strdup(pool, outbound_profile->destination_number);
 	if (!user)
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify not found user !\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify not found user !\n");
 		goto done;
 	}
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify found user: %s!\n", user);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify found user: %s!\n", user);
 	if ((domain = strchr(user, '@')))
 	{
 		*domain++ = '\0';
@@ -193,11 +195,11 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	if (!domain)
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify not found domain !\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify not found domain !\n");
 		goto done;
 	}
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_notify found domain: %s!\n", domain);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify found domain: %s!\n", domain);
 
 	if (var_event)
 	{
@@ -229,14 +231,14 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	switch_mutex_init(&originate_data.mutex, SWITCH_MUTEX_NESTED, pool);
 
-	// if (var_event && switch_true(switch_event_get_header(var_event, "apn_wait_any_register")))
-	// {
-	// 	wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
-	// }
+	if (var_event && switch_true(switch_event_get_header(var_event, "notify_wait_any_register")))
+	{
+		wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
+	}
 
 	originate_data.timelimit = &current_timelimit;
 
-	switch_event_bind_removable("apn_originate_register", SWITCH_EVENT_CUSTOM, "sofia::register", originate_register_event_handler, &originate_data, &register_event);
+	switch_event_bind_removable("notify_originate_register", SWITCH_EVENT_CUSTOM, "sofia::register", originate_register_event_handler, &originate_data, &register_event);
 
 	while (current_timelimit > 0)
 	{
