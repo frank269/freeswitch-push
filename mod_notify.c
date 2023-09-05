@@ -352,7 +352,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	if (zstr(dialer_number))
 	{
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel. dialer_number not found\n");
-		return;
+		goto done;
 	}
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
@@ -362,7 +362,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	{
 		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, "mobile::push::notification") == SWITCH_STATUS_SUCCESS)
 		{
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "uuid", apn_response.uuid);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "uuid", notify_response.uuid);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "type", "voip");
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "user", user);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "realm", domain);
