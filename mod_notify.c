@@ -142,7 +142,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
 	char *destination = NULL;
-	switch_bool_t wait_any_register = SWITCH_FALSE;
+	// switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
 	// switch_event_t *event = NULL;
@@ -231,10 +231,10 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	switch_mutex_init(&originate_data.mutex, SWITCH_MUTEX_NESTED, pool);
 
-	if (var_event && switch_true(switch_event_get_header(var_event, "notify_wait_any_register")))
-	{
-		wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
-	}
+	// if (var_event && switch_true(switch_event_get_header(var_event, "notify_wait_any_register")))
+	// {
+	// 	wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
+	// }
 
 	originate_data.timelimit = &current_timelimit;
 
