@@ -13,6 +13,20 @@ SWITCH_MODULE_DEFINITION(mod_notify, mod_notify_load, mod_notify_shutdown, NULL)
 	(((FS_VERSION_MAJOR == x) && (FS_VERSION_MINOR == y)) || \
 	 ((FS_VERSION_MAJOR == x) && (FS_VERSION_MINOR < y)) || (FS_VERSION_MAJOR < x))
 
+enum notify_state
+{
+	MOD_NOTIFY_UNDEFINE,
+	MOD_NOTIFY_SENT,
+	MOD_NOTIFY_NOTSENT
+};
+struct response_event_data
+{
+	char uuid[SWITCH_UUID_FORMATTED_LENGTH + 1];
+	enum notify_state state;
+	switch_mutex_t *mutex;
+};
+typedef struct response_event_data response_t;
+
 struct originate_register_data
 {
 	switch_memory_pool_t *pool;
@@ -88,11 +102,11 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	switch_memory_pool_t *pool;
 	switch_mutex_t *handles_mutex;
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler fired!\n");
+	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler fired!\n");
 
 	if (!originate_data)
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler originate_data is null!\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "originate_register_event_handler originate_data is null!\n");
 		return;
 	}
 
@@ -104,7 +118,7 @@ static void originate_register_event_handler(switch_event_t *event)
 	update_reg = switch_event_get_header(event, "update-reg");
 	if (!zstr(update_reg) && switch_true(update_reg))
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler user already registration, skip originate\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "originate_register_event_handler user already registration, skip originate\n");
 		return;
 	}
 
@@ -116,7 +130,7 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	if (zstr(event_username) || zstr(event_realm) || zstr(event_call_id) || zstr(event_profile) || zstr(event_contact) || zstr(domain_name) || zstr(dial_user))
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. No parameter for originate call via sofia::register\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. No parameter for originate call via sofia::register\n");
 		return;
 	}
 
@@ -129,14 +143,14 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	if (zstr(dest))
 	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. No destination contact data string\n");
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "originate_register_event_handler No destination contact data string\n");
 		goto end;
 	}
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler domain_name: %s, dial_user: %s, event_username: %s, event_realm: %s, event_call_id: %s, event_contact: %s, event_profile: %s, dest: %s \n", domain_name, dial_user, event_username, event_realm, event_call_id, event_contact, event_profile, dest);
+	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler domain_name: %s, dial_user: %s, event_username: %s, event_realm: %s, event_call_id: %s, event_contact: %s, event_profile: %s, dest: %s \n", domain_name, dial_user, event_username, event_realm, event_call_id, event_contact, event_profile, dest);
 
 	timelimit_sec = *originate_data->timelimit;
 
-	destination = //"user/1001@voice.metechvn.com";
+	destination =
 		switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_notify=false,notify_wait_any_register=%s]notify_wait/%s@%s",
 					   event_call_id,
 					   timelimit_sec,
@@ -151,11 +165,45 @@ static void originate_register_event_handler(switch_event_t *event)
 	originate_data->destination = switch_core_strdup(pool, destination);
 	switch_mutex_unlock(handles_mutex);
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Try originate to '%s' (by registration event)\n", destination);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "originate_register_event_handler Try originate to '%s' (by registration event)\n", destination);
 
 end:
 	switch_safe_free(destination);
 	switch_safe_free(dest);
+}
+
+static void response_event_handler(switch_event_t *event)
+{
+	char *uuid = NULL, *response = NULL;
+	response_t *data = (response_t *)event->bind_user_data;
+
+	uuid = switch_event_get_header(event, "uuid");
+	if (zstr(uuid) || !data)
+	{
+		return;
+	}
+
+	if (strcmp(uuid, data->uuid) != 0)
+	{
+		return;
+	}
+
+	response = switch_event_get_header(event, "response");
+	if (zstr(response))
+	{
+		return;
+	}
+
+	switch_mutex_lock(data->mutex);
+	if (!strcasecmp(response, "sent"))
+	{
+		data->state = MOD_NOTIFY_SENT;
+	}
+	else
+	{
+		data->state = MOD_NOTIFY_NOTSENT;
+	}
+	switch_mutex_unlock(data->mutex);
 }
 
 /* fake user_wait */
@@ -183,12 +231,17 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	int diff = 0;
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
-	char *destination = NULL;
-	// switch_bool_t wait_any_register = SWITCH_FALSE;
+	char *destination = NULL, *dialer_number = NULL;
+	switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
-	// switch_event_t *event = NULL;
+	switch_event_t *event = NULL;
 	switch_event_node_t *response_event = NULL, *register_event = NULL;
+	response_t notify_response = {{
+									  0,
+								  },
+								  MOD_NOTIFY_UNDEFINE,
+								  NULL};
 	originate_register_t originate_data = {
 		0,
 	};
@@ -243,6 +296,9 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify found domain: %s!\n", domain);
 
+	switch_uuid_str(notify_response.uuid, sizeof(notify_response.uuid));
+	switch_mutex_init(&notify_response.mutex, SWITCH_MUTEX_NESTED, pool);
+
 	if (var_event)
 	{
 		cid_name_override = switch_event_get_header(var_event, "origination_caller_id_name");
@@ -273,19 +329,68 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 
 	switch_mutex_init(&originate_data.mutex, SWITCH_MUTEX_NESTED, pool);
 
-	// if (var_event && switch_true(switch_event_get_header(var_event, "notify_wait_any_register")))
-	// {
-	// 	wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
-	// }
+	if (var_event && switch_true(switch_event_get_header(var_event, "notify_wait_any_register")))
+	{
+		wait_any_register = originate_data.wait_any_register = SWITCH_TRUE;
+	}
 
 	originate_data.timelimit = &current_timelimit;
 
 	switch_event_bind_removable("notify_originate_register", SWITCH_EVENT_CUSTOM, "sofia::register", originate_register_event_handler, &originate_data, &register_event);
 
+	if (wait_any_register == SWITCH_FALSE)
+	{
+		if ((switch_event_bind_removable(modname, SWITCH_EVENT_CUSTOM, "mobile::push::response", response_event_handler, &notify_response, &response_event) != SWITCH_STATUS_SUCCESS))
+		{
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Couldn't bind event!\n");
+			goto done;
+		}
+	}
+
+	dialer_number = switch_event_get_header(event, "dialer_number");
+
+	if (zstr(dialer_number))
+	{
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel. dialer_number not found\n");
+		return;
+	}
+
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
+
+	/*Create event 'mobile::push::notification' for send push notification*/
+	if (!var_event || (var_event && (!(var_val = switch_event_get_header(var_event, "enable_send_notify")) || zstr(var_val) || switch_true(var_val))))
+	{
+		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, "mobile::push::notification") == SWITCH_STATUS_SUCCESS)
+		{
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "uuid", apn_response.uuid);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "type", "voip");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "user", user);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "realm", domain);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "dialer", dialer_number);
+			// switch_event_add_body(event, "{\"content-available\":true,\"custom\":[{\"name\":\"content-message\",\"value\":\"incomming call\"}]}");
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Fire event APN for User: %s@%s\n", user, domain);
+			switch_event_fire(&event);
+			switch_event_destroy(&event);
+		}
+	}
+
 	while (current_timelimit > 0)
 	{
 		diff = (int)(switch_epoch_time_now(NULL) - start);
 		current_timelimit = timelimit_sec - diff;
+
+		if (wait_any_register != SWITCH_TRUE)
+		{
+			switch_mutex_lock(notify_response.mutex);
+			if (notify_response.state == MOD_NOTIFY_NOTSENT)
+			{
+				switch_mutex_unlock(notify_response.mutex);
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mod_notify push_wait_outgoing_channel. Event NOTIFY don't sent to %s@%s, so stop wait for incoming register\n", user, domain);
+				break;
+			}
+			switch_mutex_unlock(notify_response.mutex);
+		}
+
 		if (session)
 		{
 			switch_ivr_parse_all_messages(session);
@@ -357,6 +462,10 @@ done:
 	{
 		switch_event_unbind(&register_event);
 		register_event = NULL;
+	}
+	if (notify_response.mutex)
+	{
+		switch_mutex_destroy(notify_response.mutex);
 	}
 	switch_safe_free(dup_domain);
 	if (pool)
