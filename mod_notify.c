@@ -34,14 +34,57 @@ SWITCH_STANDARD_API(notify_api_function)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+static char *get_url_from_contact(char *buf)
+{
+	char *url = NULL, *e;
+
+	switch_assert(buf);
+
+	while (*buf == ' ')
+	{
+		buf++;
+	}
+
+	if (*buf == '"')
+	{
+		buf++;
+		if ((e = strchr(buf, '"')))
+		{
+			buf = e + 1;
+		}
+	}
+
+	while (*buf == ' ')
+	{
+		buf++;
+	}
+
+	url = strchr(buf, '<');
+
+	if (url && (e = switch_find_end_paren(url, '<', '>')))
+	{
+		url++;
+		url = strdup(url);
+		e = strchr(url, '>');
+		*e = '\0';
+	}
+	else
+	{
+		if (url)
+			buf++;
+		url = strdup(buf);
+	}
+	return url;
+}
+
 static void originate_register_event_handler(switch_event_t *event)
 {
-	// char *dest = NULL;
+	char *dest = NULL;
 	originate_register_t *originate_data = (struct originate_register_data *)event->bind_user_data;
 	char *event_username = NULL, *event_realm = NULL, *event_call_id = NULL, *event_contact = NULL, *event_profile = NULL;
 	char *destination = NULL;
 	const char *update_reg = NULL, *domain_name = NULL, *dial_user = NULL;
-	// uint32_t timelimit_sec = 0;
+	uint32_t timelimit_sec = 0;
 
 	switch_memory_pool_t *pool;
 	switch_mutex_t *handles_mutex;
@@ -71,39 +114,38 @@ static void originate_register_event_handler(switch_event_t *event)
 	event_contact = switch_event_get_header(event, "contact");
 	event_profile = switch_event_get_header(event, "profile-name");
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler domain_name: %s, dial_user: %s, event_username: %s, event_realm: %s, event_call_id: %s, event_contact: %s, event_profile: %s \n", domain_name, dial_user, event_username, event_realm, event_call_id, event_contact, event_profile);
+	if (zstr(event_username) || zstr(event_realm) || zstr(event_call_id) || zstr(event_profile) || zstr(event_contact) || zstr(domain_name) || zstr(dial_user))
+	{
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. No parameter for originate call via sofia::register\n");
+		return;
+	}
 
-	// if (zstr(event_username) || zstr(event_realm) || zstr(event_call_id) || zstr(event_profile) || zstr(event_contact) || zstr(domain_name) || zstr(dial_user))
-	// {
-	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. No parameter for originate call via sofia::register\n");
-	// 	return;
-	// }
+	if (strcasecmp(event_realm, domain_name) || strcasecmp(event_username, dial_user))
+	{
+		return;
+	}
 
-	// if (strcasecmp(event_realm, domain_name) || strcasecmp(event_username, dial_user))
-	// {
-	// 	return;
-	// }
+	dest = get_url_from_contact(event_contact);
 
-	// dest = get_url_from_contact(event_contact);
+	if (zstr(dest))
+	{
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. No destination contact data string\n");
+		goto end;
+	}
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "originate_register_event_handler domain_name: %s, dial_user: %s, event_username: %s, event_realm: %s, event_call_id: %s, event_contact: %s, event_profile: %s, dest: %s \n", domain_name, dial_user, event_username, event_realm, event_call_id, event_contact, event_profile, dest);
 
-	// if (zstr(dest))
-	// {
-	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CARUSTO. No destination contact data string\n");
-	// 	goto end;
-	// }
+	timelimit_sec = *originate_data->timelimit;
 
-	// timelimit_sec = *originate_data->timelimit;
-
-	destination = "user/1001@voice.metechvn.com";
-	// switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_notify=false,notify_wait_any_register=%s]apn_wait/%s@%s",
-	// 							 event_call_id,
-	// 							 timelimit_sec,
-	// 							 event_profile,
-	// 							 dest,
-	// 							 timelimit_sec,
-	// 							 originate_data->wait_any_register == SWITCH_TRUE ? "true" : "false",
-	// 							 event_username,
-	// 							 event_realm);
+	destination = //"user/1001@voice.metechvn.com";
+		switch_mprintf("[registration_token=%s,originate_timeout=%u]sofia/%s/%s:_:[originate_timeout=%u,enable_send_notify=false,notify_wait_any_register=%s]notify_wait/%s@%s",
+					   event_call_id,
+					   timelimit_sec,
+					   event_profile,
+					   dest,
+					   timelimit_sec,
+					   originate_data->wait_any_register == SWITCH_TRUE ? "true" : "false",
+					   event_username,
+					   event_realm);
 
 	switch_mutex_lock(handles_mutex);
 	originate_data->destination = switch_core_strdup(pool, destination);
@@ -111,9 +153,9 @@ static void originate_register_event_handler(switch_event_t *event)
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Try originate to '%s' (by registration event)\n", destination);
 
-	// end:
-	// switch_safe_free(destination);
-	// switch_safe_free(dest);
+end:
+	switch_safe_free(destination);
+	switch_safe_free(dest);
 }
 
 /* fake user_wait */
