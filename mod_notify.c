@@ -231,7 +231,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	int diff = 0;
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
-	char *destination = NULL, *dialer_number = NULL;
+	char *destination = NULL; //, *dialer_number = NULL;
 	switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
@@ -347,13 +347,13 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 		}
 	}
 
-	dialer_number = switch_event_get_header(event, "dialer_number");
+	// dialer_number = switch_event_get_header(event, "dialer_number");
 
-	if (zstr(dialer_number))
-	{
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel. dialer_number not found\n");
-		goto done;
-	}
+	// if (zstr(dialer_number))
+	// {
+	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel. dialer_number not found\n");
+	// 	goto done;
+	// }
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
 
@@ -366,7 +366,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "type", "voip");
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "user", user);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "realm", domain);
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "dialer", dialer_number);
+			// switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "dialer", dialer_number);
 			// switch_event_add_body(event, "{\"content-available\":true,\"custom\":[{\"name\":\"content-message\",\"value\":\"incomming call\"}]}");
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Fire event APN for User: %s@%s\n", user, domain);
 			switch_event_fire(&event);
