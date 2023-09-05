@@ -231,7 +231,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	int diff = 0;
 	switch_channel_t *channel = NULL;
 	switch_memory_pool_t *pool = NULL;
-	char *destination = NULL; //, *dialer_number = NULL;
+	char *destination = NULL, *dialer_number = NULL;
 	switch_bool_t wait_any_register = SWITCH_FALSE;
 	char *user = NULL, *domain = NULL, *dup_domain = NULL;
 	char *var_val = NULL;
@@ -347,15 +347,16 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 		}
 	}
 
-	// dialer_number = switch_event_get_header(event, "dialer_number");
+	dialer_number = switch_event_get_header(var_event, "dialer_number");
 
-	// if (zstr(dialer_number))
-	// {
-	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel. dialer_number not found\n");
-	// 	goto done;
-	// }
+	if (zstr(dialer_number))
+	{
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel. dialer_number not found\n");
+		// goto done;
+		dialer_number = "00000";
+	}
 
-	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
 
 	/*Create event 'mobile::push::notification' for send push notification*/
 	if (!var_event || (var_event && (!(var_val = switch_event_get_header(var_event, "enable_send_notify")) || zstr(var_val) || switch_true(var_val))))
@@ -366,9 +367,19 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "type", "voip");
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "user", user);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "realm", domain);
-			// switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "dialer", dialer_number);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "dialer", dialer_number);
 			// switch_event_add_body(event, "{\"content-available\":true,\"custom\":[{\"name\":\"content-message\",\"value\":\"incomming call\"}]}");
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Fire event APN for User: %s@%s\n", user, domain);
+			switch_event_fire(&event);
+			switch_event_destroy(&event);
+		}
+
+		// fake response event
+		if (!zstr(notify_response.uuid) && switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, "mobile::push::response") == SWITCH_STATUS_SUCCESS)
+		{
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "uuid", notify_response.uuid);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "response", "sent");
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Fire event mobile::push::response with ID: '%s' and result: '%s'\n", notify_response.uuid, "sent");
 			switch_event_fire(&event);
 			switch_event_destroy(&event);
 		}
