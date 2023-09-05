@@ -355,7 +355,7 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 	// 	goto done;
 	// }
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
+	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mod_notify push_wait_outgoing_channel found dialer: %s!\n", dialer_number);
 
 	/*Create event 'mobile::push::notification' for send push notification*/
 	if (!var_event || (var_event && (!(var_val = switch_event_get_header(var_event, "enable_send_notify")) || zstr(var_val) || switch_true(var_val))))
