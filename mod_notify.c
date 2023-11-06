@@ -373,7 +373,10 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 			switch_event_fire(&event);
 			switch_event_destroy(&event);
 		}
+	}
 
+	if (wait_any_register == SWITCH_FALSE)
+	{
 		// fake response event
 		if (!zstr(notify_response.uuid) && switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, "mobile::push::response") == SWITCH_STATUS_SUCCESS)
 		{
