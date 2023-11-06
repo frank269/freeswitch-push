@@ -375,19 +375,6 @@ static switch_call_cause_t push_wait_outgoing_channel(switch_core_session_t *ses
 		}
 	}
 
-	if (wait_any_register == SWITCH_FALSE)
-	{
-		// fake response event
-		if (!zstr(notify_response.uuid) && switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, "mobile::push::response") == SWITCH_STATUS_SUCCESS)
-		{
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "uuid", notify_response.uuid);
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "response", "sent");
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "CARUSTO. Fire event mobile::push::response with ID: '%s' and result: '%s'\n", notify_response.uuid, "sent");
-			switch_event_fire(&event);
-			switch_event_destroy(&event);
-		}
-	}
-
 	while (current_timelimit > 0)
 	{
 		diff = (int)(switch_epoch_time_now(NULL) - start);
